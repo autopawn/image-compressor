@@ -13,13 +13,13 @@ if not (args['c'] or args['x']):
     ap.error('No action requested, add -c or -x')
 
 if args['c']:
+
+    # Load image
     image = load_image(args['input'])
-    target_shape = image.shape
+    print("image_shape: %s"%(image.shape,))
 
-    pred = RegularInterpolator()
-    err,bor = compress_mat(pred,image[:,:,0])
-    print(err)
-    print(bor)
-    print(np.mean(np.abs(err)))
-
-    print("target_shape: %s"%(target_shape,))
+    bytes = image_to_bytes(image)
+    f = open(args['output'], 'wb')
+    f.write(bytes)
+    f.close()
+    

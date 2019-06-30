@@ -1,8 +1,10 @@
+from numba import jit
 import numpy as np
 
 # Creates a larger matrix by extending the borders
+@jit('int32[:,:](int32[:,:])',nopython=True)
 def extend(mat):
-    etmat = np.zeros((mat.shape[0]+2,mat.shape[1]+2))
+    etmat = np.zeros((mat.shape[0]+2,mat.shape[1]+2),dtype=np.int32)
     etmat[1:-1,1:-1] = mat
     etmat[:,0] = etmat[:,1]
     etmat[:,-1] = etmat[:,-2]
@@ -11,8 +13,9 @@ def extend(mat):
     return etmat
 
 # Rescales a matrix by the double of its size
+@jit('int32[:,:](int32[:,:])',nopython=True)
 def scale2x(mat):
-    dmat = np.zeros((mat.shape[0]*2,mat.shape[1]*2))
+    dmat = np.zeros((mat.shape[0]*2,mat.shape[1]*2),dtype=np.int32)
     dmat[0::2,0::2] = mat
     dmat[0::2,1::2] = mat
     dmat[1::2,0::2] = mat
