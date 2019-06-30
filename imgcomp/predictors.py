@@ -33,6 +33,46 @@ def lagrange_interp_2d(xd_1d,yd_1d,zd,xi,yi):
     return zi
 
 
+@jit('float64[:](int32[:,:])',nopython=True)
+def paeth3(b3x3):
+    A = b3x3[0,0]
+    B = b3x3[0,1]
+    C = b3x3[0,2]
+    D = b3x3[1,0]
+    E = b3x3[2,0]
+    F = b3x3[2,2]
+    v = 0.25*(A+F-C-E)
+    x = F+B+D-E-C-3.0*v
+    y = F+D-E-2.0*v
+    z = F+B-C-2.0*v
+    r = np.zeros(3,dtype=np.float64)
+    r[0] = x
+    r[1] = y
+    r[2] = z
+    return r
+
+# @jit('float64[:](int32[:,:])',nopython=True)
+# def large_paeth(b):
+#     r = np.zeros(3,dtype=np.float64)
+#     nw = b[2,1]+b[1,2]-b[1,1]
+#     ne = b[1,3]+nw-b[1,2]
+#     sw = b[3,1]+nw-b[2,1]
+#     r[0] = nw
+#     r[1] = ne
+#     r[2] = sw
+#     return r
+
+# def super_paeth(b):
+#     n = b.shape[0]
+#     if n==2:
+#         b[1,1] = b[0,1]+b[1,0]-b[0,0]
+#         return b
+#     else:
+#         dy = super_paeth(b[1:,:-1]-b[:-1,:-1])
+#         dx = super_paeth(b[:-1,1:]-b[:-1,:-1])
+#         for b in
+
+
 @jit('Tuple((int32,int32,int32))(int32[:,:],int32[:,:])',nopython=True)
 def predict(red_px,blu_px):
     # Points to interpolate
@@ -44,21 +84,31 @@ def predict(red_px,blu_px):
     rgy = np.array([1,3,5],dtype=np.float64)
     rgz = red_px.flatten().astype(np.float64)
     rzi = lagrange_interp_2d(rgx,rgy,rgz,xis,yis)
+    rzi = np.minimum(np.maximum(rzi,0),255)
 
-    # Interpolate with blue grid 1
-    b1gx = np.array([0,1],dtype=np.float64)
-    b1gy = np.array([0,1,2,3],dtype=np.float64)
-    b1gz = blu_px[:,:2].flatten().astype(np.float64)
-    b1zi = lagrange_interp_2d(b1gx,b1gy,b1gz,xis,yis)
+    # # Interpolate with blue grid 1
+    # b1gx = np.array([0,1],dtype=np.float64)
+    # b1gy = np.array([2,3],dtype=np.float64)
+    # b1gz = blu_px[2:,:2].flatten().astype(np.float64)
+    # b1zi = lagrange_interp_2d(b1gx,b1gy,b1gz,xis,yis)
+    # b1zi = np.minimum(np.maximum(b1zi,0),255)
+    #
+    # # Interpolate with blue grid 2
+    # b2gx = np.array([2,3],dtype=np.float64)
+    # b2gy = np.array([0,1],dtype=np.float64)
+    # b2gz = blu_px[:2,2:].flatten().astype(np.float64)
+    # b2zi = lagrange_interp_2d(b2gx,b2gy,b2gz,xis,yis)
+    # b2zi = np.minimum(np.maximum(b2zi,0),255)
+    #
+    # # Final predictions
+    # fp = 0.66*rzi+0.17*b1zi+0.17*b2zi
 
-    # Interpolate with blue grid 2
-    b2gx = np.array([0,1,2,3],dtype=np.float64)
-    b2gy = np.array([0,1],dtype=np.float64)
-    b2gz = blu_px[:2,:].flatten().astype(np.float64)
-    b2zi = lagrange_interp_2d(b2gx,b2gy,b2gz,xis,yis)
+    # pae = large_paeth(blu_px)
+    pae = paeth3(blu_px[1:,1:])
 
-    # Final predictions
-    fp = 0.7*rzi+0.15*b1zi+0.15*b2zi
+    fp = 0.66*rzi+0.34*pae
+
+    #
     nw = min(max(int(np.round(fp[0])),0),255)
     ne = min(max(int(np.round(fp[1])),0),255)
     sw = min(max(int(np.round(fp[2])),0),255)

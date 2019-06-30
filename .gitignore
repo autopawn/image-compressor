@@ -1,6 +1,8 @@
 *.bin
 output
+rgb8bit.zip
 rgb8bit
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

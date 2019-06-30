@@ -16,10 +16,10 @@ if args['c']:
 
     # Load image
     image = load_image(args['input'])
+    print("Compressing: %s"%args['input'])
     print("image_shape: %s"%(image.shape,))
 
     bytes = image_to_bytes(image)
     f = open(args['output'], 'wb')
     f.write(bytes)
     f.close()
-    

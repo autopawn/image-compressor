@@ -12,11 +12,11 @@ import pyfastpfor
 #   'simple9_rle', 'simplepfor', 'streamvbyte', 'varint', 'varintg8iu',
 #   'varintgb', 'vbyte', 'vsencoding']
 
-CODEC = "simdfastpfor128"
+CODEC = "simdfastpfor256"
 
 def compress_signed_array(arr):
-    arr = (2*np.abs(arr)+(arr<0)).astype(np.uint32)
-    # arr = (np.abs(arr)).astype(np.uint32) #NOTE: WRONG
+
+    arr = (2*np.abs(arr)-(arr<0)).astype(np.uint32)
 
     out_arr = np.zeros(arr.size*2+32,dtype=np.uint32)
 
@@ -32,6 +32,7 @@ def decompress_signed_array(arr,len):
     dec_arr = np.zeros(len,dtype=np.uint32)
     len = codec.decodeArray(arr,arr.size,dec_arr,len)
 
+    # FIXME: not right:
     dec_arr = (dec_arr.astype(np.int32)//2)*(1-2*(dec_arr%2))
 
     return dec_arr
