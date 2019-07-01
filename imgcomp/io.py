@@ -11,3 +11,7 @@ def load_image(path):
         image = image.convert('RGB')
     array = np.array(image,dtype='int32')
     return array
+
+def save_image(image,path):
+    result = Image.fromarray(image.astype('uint8'))
+    result.save(path)

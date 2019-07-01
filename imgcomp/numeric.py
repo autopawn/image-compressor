@@ -1,7 +1,7 @@
 from numba import jit
 import numpy as np
 
-from .predictors import *
+from .predictors import predict
 
 from .utils import *
 
@@ -29,8 +29,6 @@ def get_errors(prev,mat):
             err_nw = nw-mat[2*y,2*x]
             err_ne = ne-mat[2*y,2*x+1]
             err_sw = sw-mat[2*y+1,2*x]
-            # if x==mat.shape[1]//4:
-            #     print("%3d %3d %3d -> %+4d %+4d %+4d"%(nw,ne,sw,err_nw,err_ne,err_sw))
 
             # Update errors
             errors[i+0] = err_nw;
@@ -38,8 +36,8 @@ def get_errors(prev,mat):
             errors[i+2] = err_sw;
             i += 3
 
-            # Update the predictor (give it a sample) if it learns
-            # # predictor.update(red,blue,nw,ne,sw)
+            # Update the predictor here (give it a sample) if it learns
+            # # predictor.update(red,blue,mat[2*y,2*x],mat[2*y,2*x+1],mat[2*y+1,2*x])
 
             # Update currently known to the real value
             etknown[2*y+2,2*x+2] = nw-err_nw
@@ -47,6 +45,41 @@ def get_errors(prev,mat):
             etknown[2*y+3,2*x+2] = sw-err_sw
 
     return errors
+
+@jit('void(int32[:,:],int32[:,:],int32[:])',nopython=True)
+def reconstruct_mat_from_errors(prev,mat,errors):
+    # Extended prev matrix
+    etprev = extend(prev)
+
+    # Image currently known
+    etknown = scale2x(etprev)
+
+    # Predict pixels (could be done in diagonal, in parallel)
+    i = 0
+    for y in range(mat.shape[0]//2):
+        for x in range(mat.shape[1]//2):
+            # Get red window
+            red = etprev[y:y+3,x:x+3]
+            # Get blue window
+            blue = etknown[2*y:2*y+4,2*x:2*x+4]
+            # Get predictions
+            nw,ne,sw = predict(red,blue)
+            # Update matrix
+            mat[2*y,2*x] = nw-errors[i+0]
+            mat[2*y,2*x+1] = ne-errors[i+1]
+            mat[2*y+1,2*x] = sw-errors[i+2]
+            i += 3
+            # copy already known byte
+            mat[2*y+1,2*x+1] = etknown[2*y+3,2*x+3]
+
+            # Update the predictor here (give it a sample) if it learns
+            # # predictor.update(red,blue,mat[2*y,2*x],mat[2*y,2*x+1],mat[2*y+1,2*x])
+
+            # Update currently known to the real value
+            etknown[2*y+2,2*x+2] = mat[2*y,2*x]
+            etknown[2*y+2,2*x+3] = mat[2*y,2*x+1]
+            etknown[2*y+3,2*x+2] = mat[2*y+1,2*x]
+
 
 def retrieve_errors(prev,mat):
 
@@ -87,3 +120,30 @@ def compress_mat(mat):
     borders = np.concatenate(borders,axis=None)
 
     return errors,borders
+
+def decompress_mat(shape,errors,borders):
+    mshapes = get_miniature_shapes(shape)
+
+    # Last completed miniature
+    prev = None
+
+    for shap in mshapes:
+        mat = np.zeros(shap,np.int32)
+
+        # Put borders:
+        if mat.shape[0]%2==1:
+            mat[-1,:] = borders[:shap[1]]
+            borders = borders[shap[1]:]
+        if mat.shape[1]%2==1:
+            mat[:,-1] = borders[:shap[0]]
+            borders = borders[shap[0]:]
+
+        # Reconstruct mat from errors
+        if prev is not None:
+            n_errs = (mat.shape[0]-mat.shape[0]%2)*(mat.shape[1]-mat.shape[1]%2)*3//4
+            reconstruct_mat_from_errors(prev,mat,errors)
+            errors = errors[n_errs:]
+
+        prev = mat
+
+    return mat
