@@ -66,6 +66,7 @@ def predict_mixed(red_px,blu_px):
 
     pae = paeth3(blu_px[1:,1:])
 
+    # fp = 0.7*rzi+0.3*pae
     fp = 0.7*rzi+0.3*pae
 
     #
@@ -89,9 +90,9 @@ def predict_faster(red_px,blu_px):
     B = blu_px[1,2]-rzi[3]
     D = blu_px[2,1]-rzi[4]
     rzi = rzi[:3]
-    rzi[0] += .2*(B+D)
-    rzi[1] += .2*D
-    rzi[2] += .2*B
+    rzi[0] += 0.5*(B+D)
+    rzi[1] += 0.5*D
+    rzi[2] += 0.5*B
 
     fp = rzi
 
